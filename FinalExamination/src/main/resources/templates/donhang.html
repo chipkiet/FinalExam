@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý Đơn Hàng</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body><div class="container mt-5">
+  <h2 class="text-center">Quản lý Đơn Hàng</h2>
+
+  <!-- Form lọc đơn hàng -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <label for="startDate">Ngày bắt đầu</label>
+      <input type="date" class="form-control" id="startDate">
+    </div>
+    <div class="col-md-3">
+      <label for="endDate">Ngày kết thúc</label>
+      <input type="date" class="form-control" id="endDate">
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+      <button class="btn btn-primary w-100" onclick="filterOrders()">Xem danh sách</button>
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <button class="btn btn-success w-100" onclick="viewTopOrders()">Xem top đơn hàng</button>
+    </div>
+  </div>
+
+  <!-- Bảng danh sách đơn hàng -->
+  <table class="table table-bordered table-hover">
+    <thead class="thead-dark">
+    <tr>
+      <th scope="col">STT</th>
+      <th scope="col">Mã Đơn Hàng</th>
+      <th scope="col">Tên Sản Phẩm</th>
+      <th scope="col">Giá Sản Phẩm</th>
+      <th scope="col">Loại Sản Phẩm</th>
+      <th scope="col">Ngày Mua</th>
+      <th scope="col">Số Lượng</th>
+      <th scope="col">Tổng Tiền</th>
+      <th scope="col">Thao tác</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="donHang, iterStat : ${donHangList}">
+      <td th:text="${iterStat.index + 1}"></td>
+      <td th:text="${donHang.maDonHang}"></td>
+      <td th:text="${donHang.sanPham.tenSp}"></td>
+      <td th:text="${donHang.sanPham.giaSp}"></td>
+      <td th:text="${donHang.sanPham.loaiSanPham.tenLoaiSp}"></td>
+      <td th:text="${#temporals.format(donHang.ngayMua, 'dd/MM/yyyy')}"></td>
+      <td th:text="${donHang.soLuong}"></td>
+      <td th:text="${donHang.soLuong * donHang.sanPham.giaSp}"></td>
+      <td>
+        <a th:href="@{/don-hang/edit/{id}(id=${donHang.maDonHang})}"
+           class="btn btn-warning btn-sm">Sửa</a>
+        <button class="btn btn-danger btn-sm"
+                th:onclick="'deleteDonHang(' + ${donHang.maDonHang} + ')'">Xóa</button>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+  function filterOrders() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    fetch(`/don-hang/filter?startDate=${startDate}&endDate=${endDate}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Lỗi khi lọc đơn hàng');
+              }
+              return response.json();
+            })
+            .then(data => {
+              // Cập nhật bảng với dữ liệu mới
+              updateTable(data);
+            })
+            .catch(error => alert(error));
+  }
+
+  function viewTopOrders() {
+    fetch('/don-hang/top')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Lỗi khi lấy top đơn hàng');
+              }
+              return response.json();
+            })
+            .then(data => {
+              // Cập nhật bảng với dữ liệu top đơn hàng
+              updateTable(data);
+            })
+            .catch(error => alert(error));
+  }
+
+  function deleteDonHang(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa đơn hàng này?')) {
+      fetch(`/don-hang/delete/${id}`, {
+        method: 'DELETE'
+      })
+              .then(response => {
+                if (response.ok) {
+                  window.location.reload();
+                } else {
+                  alert('Không thể xóa đơn hàng');
+                }
+              })
+              .catch(error => alert('Lỗi khi xóa đơn hàng: ' + error));
+    }
+  }
+
+  function updateTable(data) {
+    const tbody = document.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    data.forEach((donHang, index) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${donHang.maDonHang}</td>
+            <td>${donHang.sanPham.tenSp}</td>
+            <td>${donHang.sanPham.giaSp}</td>
+            <td>${donHang.sanPham.loaiSanPham.tenLoaiSp}</td>
+            <td>${new Date(donHang.ngayMua).toLocaleDateString('vi-VN')}</td>
+            <td>${donHang.soLuong}</td>
+            <td>${donHang.soLuong * donHang.sanPham.giaSp}</td>
+            <td>
+                <a href="/don-hang/edit/${donHang.maDonHang}"
+                   class="btn btn-warning btn-sm">Sửa</a>
+                <button class="btn btn-danger btn-sm"
+                        onclick="deleteDonHang(${donHang.maDonHang})">Xóa</button>
+            </td>
+        `;
+      tbody.appendChild(row);
+    });
+  }
+</script>
+</body>
+</html>
